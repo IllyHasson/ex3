@@ -122,7 +122,7 @@ const flattenSortUnion = (tes: TExp[]): TExp[] =>
     removeDuplicatesAndNever(sort(subTypeComparator, flattenUnion(tes)));
 
 const flattenSortInter = (tes: TExp[]): TExp[] =>
-    removeDuplicatesAndNever(sort(subTypeComparator, flattenInter(tes)));
+    returnDuplicatesAndNever(sort(subTypeComparator, flattenInter(tes)));
 
 // In case there is only one component - remove the union wrapper.
 // (union) = never
@@ -188,7 +188,8 @@ const removeDuplicatesAndNever = (tes: TExp[]): TExp[] =>
 
 const returnDuplicatesAndNever = (tes: TExp[]): TExp[] =>
     isEmpty(tes) ? tes :
-        !containsType(tes.slice(1), tes[0]) ? returnDuplicatesAndNever(tes.slice(1)) :
+
+        (!isSubType(tes[0],makeUnionTExp(tes.slice(1)))) ? returnDuplicatesAndNever(tes.slice(1)) :
             isNeverTExp(tes[0]) ? returnDuplicatesAndNever(tes.slice(1)) :
                 [tes[0], ...returnDuplicatesAndNever(tes.slice(1))];
 
@@ -271,8 +272,14 @@ export const crossProduct = (ll1: TExp[][], ll2: TExp[][]): TExp[][] =>
 
 // SubType comparator
 export const isSubType = (te1: TExp, te2: TExp): boolean =>
+    (isAnyTExp(te1) && isAnyTExp(te2)) ? true :
+    isAnyTExp(te1) ? false :
+    isAnyTExp(te2) ? true :
+    (isNeverTExp(te1) || isNeverTExp(te2))? false :
     (isUnionTExp(te1) && isUnionTExp(te2)) ? isSubset(te1.components, te2.components) :
         isUnionTExp(te2) ? containsType(te2.components, te1) :
+        (isInterTExp(te1) && isInterTExp(te2)) ? isSubset(te1.components, te2.components) :
+        isInterTExp(te2) ? containsType(te2.components, te1) :
             (isProcTExp(te1) && isProcTExp(te2)) ? checkProcTExps(te1, te2) :
                 isTVar(te1) ? equals(te1, te2) :
                     isAtomicTExp(te1) ? equals(te1, te2) :
@@ -371,6 +378,7 @@ export const parseTExp = (texp: Sexp): Result<TExp> =>
 
 const parseCompoundTExp = (texps: Sexp[]): Result<TExp> =>
     (texps[0] === "union") ? parseUnionTExp(texps) :
+    (texps[0] === "inter") ? parseInterTExp(texps) :
         parseProcTExp(texps);
 
 // Expect (union texp1 ...)
