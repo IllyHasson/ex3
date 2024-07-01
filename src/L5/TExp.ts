@@ -221,7 +221,7 @@ export const makeDnf = (disj: UnionTExp[], factors: TExp[]): TExp =>
         isEmpty(disj) ? ({ tag: "InterTExp", components: factors }) :
             factorDisj(disj, factors);
 
-export const makeDiff = (te1: TExp, te2: TExp): TExp => {
+export const makeDiffTExp = (te1: TExp, te2: TExp): TExp => {
     if (isAnyTExp(te1) || isAnyTExp(te2))
         if (isAnyTExp(te1) && isAnyTExp(te2))
             return makeNeverTExp();
@@ -233,7 +233,7 @@ export const makeDiff = (te1: TExp, te2: TExp): TExp => {
             else if (!containsType(te1.components, te2))
                 return makeUnionTExp([...te1.components, te2]);
             else
-                return makeUnionTExp(te1.components.filter((te: TExp) => te.tag === te2.tag));
+                return makeUnionTExp(te1.components.filter((te: TExp) => te.tag != te2.tag));
         else if (isUnionTExp(te2) || isInterTExp(te2))
             if (!containsType(te2.components, te1))
                 return makeUnionTExp([...te2.components, te1]);
