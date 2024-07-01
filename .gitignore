@@ -1,0 +1,8 @@
+global.d.ts
+node_modules/*
+src/shared/*
+test/*
+jest.config.js
+package-lock.json
+package.json
+tsconfig.json
