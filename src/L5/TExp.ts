@@ -223,25 +223,26 @@ export const makeDnf = (disj: UnionTExp[], factors: TExp[]): TExp =>
             factorDisj(disj, factors);
 
 export const makeDiffTExp = (te1: TExp, te2: TExp): TExp => {
-    if (isAnyTExp(te1) || isAnyTExp(te2))
-        if (isAnyTExp(te1) && isAnyTExp(te2))
+    if (isAnyTExp(te2))
             return makeNeverTExp();
-        else return makeAnyTExp();
     else {
-        if (isUnionTExp(te1) || isInterTExp(te1))
-            if (isUnionTExp(te2) || isInterTExp(te2))
-                return makeUnionTExp(differenceWith((a: TExp, b: TExp) => a.tag === b.tag, te1.components, te2.components));
-            else if (!containsType(te1.components, te2))
-                return makeUnionTExp([...te1.components, te2]);
-            else
+        
+        if (isUnionTExp(te1) || isInterTExp(te1)){
+            if(isUnionTExp(te2) || isInterTExp(te2)){
+                const comp1 = te1.components;
+                const comp2 = te2.components;
+                return makeUnionTExp(comp1.filter((te: TExp) => !containsType(comp2, te)));
+            }
+            else{
                 return makeUnionTExp(te1.components.filter((te: TExp) => te.tag != te2.tag));
+            }
+        }
         else if (isUnionTExp(te2) || isInterTExp(te2))
-            if (!containsType(te2.components, te1))
-                return makeUnionTExp([...te2.components, te1]);
-            else
-                return makeUnionTExp(te2.components.filter((te: TExp) => te.tag === te1.tag));
+            return containsType(te2.components, te1) ? makeNeverTExp() : te1;
         else
-            return makeUnionTExp([te2, te1]);
+            return equals(te1, te2) ? makeNeverTExp() : te1;
+       
+    
     }
 }
 // Preconditions: disj is not empty, factors is not empty
@@ -271,19 +272,27 @@ export const crossProduct = (ll1: TExp[][], ll2: TExp[][]): TExp[][] =>
         ll1).flat();
 
 // SubType comparator
-export const isSubType = (te1: TExp, te2: TExp): boolean =>
-    (isAnyTExp(te1) && isAnyTExp(te2)) ? true :
+export const isSubType = (te1: TExp, te2: TExp): boolean =>{
+    if(isUnionTExp(te1) || isInterTExp(te1)){
+    console.log(te1.components);
+    }
+    console.log(isNumTExp(te1) , isNumTExp(te2));
+    return (isAnyTExp(te1) && isAnyTExp(te2)) ? true :
     isAnyTExp(te1) ? false :
     isAnyTExp(te2) ? true :
-    (isNeverTExp(te1) || isNeverTExp(te2))? false :
+    isNeverTExp(te1) ? true :
+    (isNeverTExp(te2))? false :
     (isUnionTExp(te1) && isUnionTExp(te2)) ? isSubset(te1.components, te2.components) :
+        isUnionTExp(te2) && isInterTExp(te1) ? isSubset(te1.components, te2.components) :
         isUnionTExp(te2) ? containsType(te2.components, te1) :
         (isInterTExp(te1) && isInterTExp(te2)) ? isSubset(te1.components, te2.components) :
+        isInterTExp(te2) && isUnionTExp(te1) ? te1.components.every((te) => isSubType(te, te2)) :
         isInterTExp(te2) ? containsType(te2.components, te1) :
             (isProcTExp(te1) && isProcTExp(te2)) ? checkProcTExps(te1, te2) :
                 isTVar(te1) ? equals(te1, te2) :
                     isAtomicTExp(te1) ? equals(te1, te2) :
                         false;
+}
 
 // True when te is in tes or is a subtype of one of the elements of tes
 export const containsType = (tes: TExp[], te: TExp): boolean =>
